@@ -22,6 +22,28 @@ st.set_page_config(
     layout="wide"
 )
 
+# Helper function to load the help document
+def load_help_document():
+    help_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "HELP.md")
+    try:
+        with open(help_path, "r") as f:
+            return f.read()
+    except Exception:
+        return "# Help Guide\nThe help document could not be loaded. Please refer to README.md for instructions."
+
+# Add a help button at the top of the app
+def show_help_widget():
+    col1, col2 = st.columns([6, 1])
+    with col2:
+        if st.button("❓ Help"):
+            st.session_state.show_help = not st.session_state.get("show_help", False)
+    
+    if st.session_state.get("show_help", False):
+        with st.expander("Help Guide", expanded=True):
+            st.markdown(load_help_document())
+            if st.button("Close Help"):
+                st.session_state.show_help = False
+
 # Fix for asyncio event loop on Windows
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -1389,54 +1411,101 @@ def display_video_results(result):
                 verdict_color = "red" if frame_result['confidence'] > 0.7 else "green"
                 st.markdown(f"**Verdict:** <span style='color:{verdict_color};'>{'FAKE' if frame_result['confidence'] > 0.7 else 'REAL'}</span>", unsafe_allow_html=True)
 
-# Main application
-st.title("Advanced Deepfake Detection System")
-st.markdown("""
-This system uses a multi-modal approach to detect deepfake content:
-- Deep Learning Model Analysis
-- Facial Behavior Analysis
-- Heart Rate Estimation
-- Visual Explanation through Heatmap
-""")
-
-# Load models
-with st.spinner("Loading models..."):
+def main():
+    """Main application logic"""
+    # Show the help widget
+    show_help_widget()
+    
+    # Display title and description
+    st.title("Advanced Deepfake Detection System")
+    st.markdown(
+        """
+        This system detects deepfakes using a multi-modal approach, combining facial behavior analysis, 
+        heart rate estimation, and advanced deep learning techniques.
+        
+        Upload an image or video to get started!
+        """
+    )
+    
+    # Load detection models
     models = load_models()
-st.success("Models loaded successfully!")
-
-# File upload
-st.subheader("Upload Content for Analysis")
-file_type = st.radio("Select input type:", ["Image", "Video"])
-
-if file_type == "Image":
-    uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
     
-    if uploaded_file is not None:
-        # Read and process image
-        image = Image.open(uploaded_file)
-        image_array = np.array(image)
+    # Create sidebar for options
+    with st.sidebar:
+        st.header("Input Options")
+        input_type = st.radio("Select input type:", ["Image", "Video"])
         
-        with st.spinner("Analyzing image..."):
-            result = analyze_image(image_array, models)
+        uploaded_file = st.file_uploader(
+            f"Upload {input_type.lower()}",
+            type=["jpg", "jpeg", "png"] if input_type == "Image" else ["mp4", "avi", "mov"]
+        )
         
-        display_image_results(result)
-
-else:  # Video
-    uploaded_file = st.file_uploader("Choose a video...", type=["mp4"])
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("About")
+        st.sidebar.info(
+            """
+            This application uses advanced deep learning techniques to detect deepfakes.
+            
+            Features:
+            - Multi-modal analysis
+            - Cultural clothing verification
+            - Face & behavior analysis
+            - Heart rate estimation
+            """
+        )
+        
+        st.sidebar.markdown("---")
+        st.sidebar.caption("© 2025 Deepfake Detection Project")
     
+    # Process uploaded file
     if uploaded_file is not None:
-        # Save uploaded video to temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
-            tmp_file.write(uploaded_file.read())
-            video_path = tmp_file.name
+        if input_type == "Image":
+            # Process image
+            image = Image.open(uploaded_file)
+            image = np.array(image)
+            
+            # Analyze image
+            with st.spinner("Analyzing image..."):
+                result = analyze_image(image, models)
+            
+            # Display results
+            display_image_results(result)
+        else:
+            # Process video
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_file:
+                tmp_file.write(uploaded_file.read())
+                video_path = tmp_file.name
+            
+            # Analyze video
+            with st.spinner("Analyzing video..."):
+                result = analyze_video(video_path, models)
+            
+            # Display results
+            display_video_results(result)
+            
+            # Clean up temporary file
+            os.unlink(video_path)
+    else:
+        # Show demo image if no file is uploaded
+        st.image(
+            "https://media.istockphoto.com/id/1404835159/photo/face-recognition-ai-technology-digital-remix.jpg?s=612x612&w=0&k=20&c=GurFP9QT7iRzEgP_VfHgcRRlLef8sMK4ZXITZqFk4X8=",
+            caption="Upload an image or video to get started!",
+            width=600
+        )
         
-        with st.spinner("Analyzing video..."):
-            result = analyze_video(video_path, models)
-        
-        # Clean up temporary file
-        Path(video_path).unlink()
-        
-        display_video_results(result)
+        # Show tips
+        st.markdown(
+            """
+            ### Tips for best results:
+            - Use clear images with visible faces
+            - Keep video length under 2 minutes for faster processing
+            - For cultural clothing analysis, ensure the garments are clearly visible
+            - The system works best with frontal or near-frontal faces
+            """
+        )
+
+# Main application
+main()
 
 # Add footer
 st.markdown("---")
