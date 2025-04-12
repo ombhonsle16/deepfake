@@ -1,0 +1,38 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Model weights
+models/*.pth
+models/*.dat
+*.pth
+*.dat
+*.whl
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Logs
+logs/
+*.log
+
+# Local development settings
+.env
+.idea/
+.vscode/
+
+# System files
+.DS_Store
+Thumbs.db 
